@@ -26,7 +26,7 @@ loadConfig(client);
 const { loadDistube } = require('./Handlers/distube');
 loadDistube(client);
 
-client.login(process.env.token).then(() => {
+client.login(process.env.Token).then(() => {
     console.log(`Client logged in as ${client.user.username}`)
     client.user.setActivity(`With  ${client.guilds.cache.size} guild(s)`)
 })

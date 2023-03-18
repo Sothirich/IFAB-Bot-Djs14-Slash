@@ -6,3 +6,5 @@ SpotifyID=""
 Database=""
 Cookie=""
 ChatGPT=""
+identityToken=''
+YOUTUBE_API_KEY=''

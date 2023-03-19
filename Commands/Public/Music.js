@@ -304,6 +304,8 @@ module.exports = {
                     .then(_msg => { setTimeout(() => interaction.deleteReply().catch(e => console.log(e)), 10000) });
                 }
                 case "jump": {
+                    if (queue.songs.length - 1 == 0) return interaction.reply({ content: "There's no song to jump to.", ephemeral: true });
+
                     let position = options.getNumber("position");
                     if (position > queue.songs.length - 1) position = queue.songs.length - 1;
 
@@ -312,7 +314,6 @@ module.exports = {
                     
                     return interaction.reply({ content: `*️⃣ Jumped successfully.\n Loaded: **${song.name}**` })
                     .then(_msg => { setTimeout(() => interaction.deleteReply().catch(e => console.log(e)), 10000) });
-
                 }
                 case "loop": {
                     let Mode2 = options.getString("mode");
@@ -328,6 +329,7 @@ module.exports = {
                     .then(_msg => { setTimeout(() => interaction.deleteReply().catch(e => console.log(e)), 10000) });
                 }
                 case "remove": {
+                    if (queue.songs.length - 1 == 0) return interaction.reply({ content: "There's no song to remove.", ephemeral: true });
                     let index = options.getNumber("index");
                     let lastIndex = options.getNumber("toindex");
 
@@ -336,7 +338,7 @@ module.exports = {
                     if (lastIndex > queue.songs.length - 1) lastIndex = queue.songs.length - 1;
                     let amount = lastIndex - index + 1;
 
-                    queue.songs.splice(index, amount);
+                    queue.songs.splice(index, amount>1 ? amount: 1);
                     const text = amount>1? `🔽 Successfully removed ${amount} song${amount > 1 ? "s" : ""}.`: `🔽 Successfully removed **${song.name}**.`
                     
                     return interaction.reply({ content: `${text}`})
@@ -349,11 +351,14 @@ module.exports = {
                     if (index > queue.songs.length - 1)
                     return interaction.reply({ content: `Song in index ${index} does not exist!`, ephemeral: true });
 
+                    if (index == newIndex)
+                    return interaction.reply({ content: `You want to move index ${index} to the same index!??`, ephemeral: true });
+
                     let song = queue.songs[index];
                     queue.songs.splice(index, 1);
                     queue.addToQueue(song, newIndex);
 
-                    return interaction.reply({ content: `🔽 Successfully moved **${song.name}** to the **\`${newIndex}th\`** Place right after **_${queue.songs[newIndex - 1].name}_!**` })
+                    return interaction.reply({ content: `🔽 Successfully moved **${song.name}** to index ${index}` })
                     .then(_msg => { setTimeout(() => interaction.deleteReply().catch(e => console.log(e)), 10000) });
                 }
                 case "lyrics": {

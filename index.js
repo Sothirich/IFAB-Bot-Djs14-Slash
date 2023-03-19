@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, Partials, Collection } = require('discord.js')
+const { Client, GatewayIntentBits, Partials, Collection, ActivityType } = require('discord.js')
 const { Guilds, GuildMembers, GuildMessages, GuildMessageReactions, MessageContent, GuildVoiceStates } = GatewayIntentBits
 const { User, Message, GuildMember, ThreadMember } = Partials
 
@@ -28,5 +28,8 @@ loadDistube(client);
 
 client.login(process.env.Token).then(() => {
     console.log(`Client logged in as ${client.user.username}`)
-    client.user.setActivity(`With  ${client.guilds.cache.size} guild(s)`)
+    client.user.setPresence({
+        activities: [{ name: `${client.user.username}`, type: ActivityType.Listening }],
+        status: 'online',
+      });
 })

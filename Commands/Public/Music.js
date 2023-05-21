@@ -202,8 +202,7 @@ module.exports = {
                     let volume = options.getNumber("percentage")
                     queue.setVolume(volume)
 
-                    return interaction.reply({ content: `Volume has been set to \`${volume}%\`` })
-                    .then(_msg => { setTimeout(() => interaction.deleteReply().catch(e => console.log(e)), 5000) });
+                    return interaction.reply({ content: `Volume has been set to \`${volume}%\``, ephemeral: true });
                 }
                 case "queue": {
                     let currentPage = 0;
@@ -219,8 +218,7 @@ module.exports = {
                                 .setColor('#ED4245')
                                 .setDescription(`__Now Playing:__\n${queue.songs.map(song => `**[${song.name}](${song.url})** | \`${song.formattedDuration}\` | \`Requested By: ${song.user.tag}\``).slice(0, 1).join("\n")}\n`)
                                 .setFooter({text: 'Page: 0'})
-                            ]})
-                        .then((_msg) => {setTimeout(() => interaction.deleteReply().catch((e) => console.log(e)), 30000);});
+                            ], ephemeral: true });
 
                     const embeds = [];
                         let k = 0;
@@ -259,49 +257,41 @@ module.exports = {
                 }
                 case "skip": {
                     queue.skip()
-                    return interaction.reply({ content: "⏩ Song has been skipped." })
-                    .then(_msg => { setTimeout(() => interaction.deleteReply().catch(), 10000) });
+                    return interaction.reply({ content: "⏩ Song has been skipped.", ephemeral: true });
                 }
                 case "pause": {
                     if (queue.paused) {
                         queue.resume()
-                        return interaction.reply({ content: "⏯ Song has been resumed for you xD." })
-                        .then(_msg => { setTimeout(() => interaction.deleteReply().catch(e => console.log(e)), 10000) });
+                        return interaction.reply({ content: "⏯ Song has been resumed for you xD.", ephemeral: true });
                     }
                     queue.pause()
 
-                    return interaction.reply({ content: "⏸ Song has been paused." })
-                    .then(_msg => { setTimeout(() => interaction.deleteReply().catch(e => console.log(e)), 10000) });
+                    return interaction.reply({ content: "⏸ Song has been paused.", ephemeral: true });
                 }
                 case "resume": {
                     if (queue.paused) {
                         queue.resume()
 
-                        return interaction.reply({ content: "⏯ Song has been resumed." })
-                        .then(_msg => { setTimeout(() => interaction.deleteReply().catch(e => console.log(e)), 10000) });
+                        return interaction.reply({ content: "⏯ Song has been resumed.", ephemeral: true });
                     } else {
-                        return interaction.reply({ content: "🚫 The queue is not paused!" })
-                        .then(_msg => { setTimeout(() => interaction.deleteReply().catch(e => console.log(e)), 10000) });
+                        return interaction.reply({ content: "🚫 The queue is not paused!", ephemeral: true });
                     }
                 }
                 case "clear": {
                     queue.stop()
 
-                    return interaction.reply({ content: `⏹ Cleared the Queue.` })
-                    .then(_msg => { setTimeout(() => interaction.deleteReply().catch(e => console.log(e)), 10000) });
+                    return interaction.reply({ content: `⏹ Cleared the Queue.`, ephemeral: true });
                 }
                 case "shuffle": {
                     queue.shuffle();
 
-                    return interaction.reply({ content: "🔀 Song has been shuffled." })
-                    .then(_msg => { setTimeout(() => interaction.deleteReply().catch(e => console.log(e)), 10000) });
+                    return interaction.reply({ content: "🔀 Song has been shuffled.", ephemeral: true });
                 }
                 case "relatedsong": {
 
                     await queue.addRelatedSong();
                     
-                    return interaction.reply({ content: `🔄 **${queue.songs[queue.songs.length-1].name}** has been added.` })
-                    .then(_msg => { setTimeout(() => interaction.deleteReply().catch(e => console.log(e)), 10000) });
+                    return interaction.reply({ content: `🔄 **${queue.songs[queue.songs.length-1].name}** has been added.`, ephemeral: true });
                 }
                 case "jump": {
                     if (queue.songs.length - 1 == 0) return interaction.reply({ content: "There's no song to jump to.", ephemeral: true });
@@ -312,21 +302,18 @@ module.exports = {
                     let song = queue.songs[position];
                     queue.jump(position)
                     
-                    return interaction.reply({ content: `*️⃣ Jumped successfully.\n Loaded: **${song.name}**` })
-                    .then(_msg => { setTimeout(() => interaction.deleteReply().catch(e => console.log(e)), 10000) });
+                    return interaction.reply({ content: `*️⃣ Jumped successfully.\n Loaded: **${song.name}**`, ephemeral: true });
                 }
                 case "loop": {
                     let Mode2 = options.getString("mode");
                     queue.setRepeatMode(parseInt(Mode2));
 
-                    return interaction.reply({ content: `🔁 Loop is set to **${Mode2 == 1 ? "Song-Loop" : Mode2 == 2 ? "Queue-Loop" : "Off"}**` })
-                    .then(_msg => { setTimeout(() => interaction.deleteReply().catch(e => console.log(e)), 10000) });
+                    return interaction.reply({ content: `🔁 Loop is set to **${Mode2 == 1 ? "Song-Loop" : Mode2 == 2 ? "Queue-Loop" : "Off"}**`, ephemeral: true });
                 }
                 case "autoplay": {
                     let autoplay = queue.toggleAutoplay();
 
-                    return interaction.reply({ content: `🔂 Autoplay is set to ${autoplay ? "On" : "Off"}` })
-                    .then(_msg => { setTimeout(() => interaction.deleteReply().catch(e => console.log(e)), 10000) });
+                    return interaction.reply({ content: `🔂 Autoplay is set to ${autoplay ? "On" : "Off"}`, ephemeral: true });
                 }
                 case "remove": {
                     if (queue.songs.length - 1 == 0) return interaction.reply({ content: "There's no song to remove.", ephemeral: true });
@@ -341,8 +328,7 @@ module.exports = {
                     queue.songs.splice(index, amount>1 ? amount: 1);
                     const text = amount>1? `🔽 Successfully removed ${amount} song${amount > 1 ? "s" : ""}.`: `🔽 Successfully removed **${song.name}**.`
                     
-                    return interaction.reply({ content: `${text}`})
-                    .then(_msg => { setTimeout(() => interaction.deleteReply().catch(e => console.log(e)), 10000) });
+                    return interaction.reply({ content: `${text}`, ephemeral: true });
                 }
                 case "move": {
                     let index = options.getNumber("fromindex");
@@ -358,8 +344,7 @@ module.exports = {
                     queue.songs.splice(index, 1);
                     queue.addToQueue(song, newIndex);
 
-                    return interaction.reply({ content: `🔽 Successfully moved **${song.name}** to index ${index}` })
-                    .then(_msg => { setTimeout(() => interaction.deleteReply().catch(e => console.log(e)), 10000) });
+                    return interaction.reply({ content: `🔽 Successfully moved **${song.name}** to index ${index}`, ephemeral: true });
                 }
                 case "lyrics": {
                     let songTitle = options.getString("title")
@@ -373,7 +358,7 @@ module.exports = {
                                 .setTitle(`${songTitle} - Lyrics`)
                                 .setDescription(lyrics)
                             ]
-                        }).then(_msg => { setTimeout(() => interaction.deleteReply().catch(e => console.log(e)), (3*60000)) });
+                            , ephemeral: true });
                     }
 
                     if (!guild.members.me.voice.channelId || !queue)
@@ -391,8 +376,7 @@ module.exports = {
                             .setURL(currentsong.url)
                             .setThumbnail(currentsong.thumbnail)
                             .setDescription(lyrics)
-                        ]
-                    }).then(_msg => { setTimeout(() => interaction.deleteReply().catch(e => console.log(e)), ((currentsong.duration - queue.currentTime) * 1000)) });
+                        ], ephemeral: true });
                 }
                 case "nowplaying": {
                     let currentsong = queue.songs[0];
@@ -420,8 +404,7 @@ module.exports = {
                             .setThumbnail(currentsong.thumbnail)
                             .setFooter({ text: `${guild.name}`, iconURL: guild.iconURL({ dynamic: true }) })
                             .setTimestamp()
-                        ]
-                    }).then(_msg => { setTimeout(() => interaction.deleteReply().catch(e => console.log(e)), ((currentsong.duration - queue.currentTime) * 1000)) });
+                        ], ephemeral: true });
                 }
                 case "forceplay": {
                     client.distube.play(member.voice.channel, options.getString("song"), {
@@ -439,8 +422,7 @@ module.exports = {
 
                     client.distube.voices.leave(voiceChannel);
 
-                    return interaction.reply({ content: `Leaving the <#${guild.members.me.voice.channelId}>` })
-                    .then(_msg => { setTimeout(() => interaction.deleteReply().catch(e => console.log(e)), 10000) });
+                    return interaction.reply({ content: `Leaving the <#${guild.members.me.voice.channelId}>`, ephemeral: true });
                 }
                 case "playnext": {
                     client.distube.play(member.voice.channel, options.getString("song"),{ 
@@ -461,8 +443,7 @@ module.exports = {
                         queue.filters.add(filter)
                     }
 
-                    return interaction.reply({ content: `🔁 Filter is set to **${options.getString("type")}**` })
-                    .then(_msg => { setTimeout(() => interaction.deleteReply().catch(e => console.log(e)), 10000) });
+                    return interaction.reply({ content: `🔁 Filter is set to **${options.getString("type")}**`, ephemeral: true });
                 }
             }
         } catch (error) {

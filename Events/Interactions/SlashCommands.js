@@ -23,6 +23,15 @@ module.exports = {
             ephemeral: true
         })
 
+        const permission = command.data.default_member_permissions;
+
+        if (permission) {
+            if (!interaction.member.permissions.has(permission))
+            return interaction.reply({ content: `You do not have the required permission for this command: \`${interaction.commandName}\`.`, ephemeral: true })
+
+            else if (!interaction.guild.members.me.permissions.has(permission))
+            return interaction.reply({ content: `I do not have the required permission for this command: \`${interaction.commandName}\`.`, ephemeral: true })
+        }
         // const subCommand = interaction.options.getSubcommand(false)
         // if (subCommand) {
         //     const subCommandFile = client.subCommands.get(`${interaction.commandName}.${subCommand}`)

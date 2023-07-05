@@ -23,29 +23,36 @@ module.exports = {
      * @param {ChatInputCommandInteraction} interaction 
      * @param {client} client 
      */
-    execute(interaction, client) {
+    async execute(interaction, client) {
         const choice = interaction.options.getString("type");
-
-        switch(choice) {
-            case "events": {
-                for (const [key, value] of client.events)
-                    client.removeListener(`${key}`, value, true)
-                
-                loadEvents(client)
-                interaction.reply({
-                    content: 'Reloaded Events.',
-                    ephemeral: true
-                })
+        
+        try {
+            switch(choice) {
+                case "events": {
+                    await interaction.deferReply({ ephemeral: true });
+    
+                    for (const [key, value] of client.events)
+                        client.removeListener(`${key}`, value, true)
+                    
+                    loadEvents(client)
+                    return interaction.editReply({
+                        content: 'Reloaded Events.',
+                        ephemeral: true
+                    });
+                }
+                case "commands": {
+                    await interaction.deferReply({ ephemeral: true });
+    
+                    loadCommands(client)
+                    return interaction.editReply({
+                        content: 'Reloaded Commands.',
+                        ephemeral: true
+                    });
+                }
             }
-            break
-            case "commands": {
-                loadCommands(client)
-                interaction.reply({
-                    content: 'Reloaded Commands.',
-                    ephemeral: true
-                })
-            }
-            break
+        } catch (error) {
+            console.log(error);
         }
+        
     }
 }

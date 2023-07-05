@@ -1,4 +1,4 @@
-const { Client, ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const { Client, ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder, PermissionsBitField, PermissionFlagsBits } = require("discord.js");
 const lyricsFinder = require('lyrics-finder')
 
 module.exports = {
@@ -6,6 +6,7 @@ module.exports = {
     .setName("music")
     .setDescription("Complete music system.")
     .setDMPermission(false)
+    .setDefaultMemberPermissions(PermissionFlagsBits.ViewChannel)
     .addSubcommand((subCommand) => subCommand
         .setName('play')
         .setDescription("Play a song.")
@@ -178,6 +179,12 @@ module.exports = {
         if (!voiceChannel)
         return interaction.reply({ content: "You must be in a voice channel to use music commands.", ephemeral: true });
         
+        if (!channel.permissionsFor(guild.members.me).has(PermissionsBitField.Flags.ViewChannel))
+        return interaction.reply({ content: `I do not have permission to view this channel <#${channel.id}>`, ephemeral: true });
+
+        if (!voiceChannel.permissionsFor(guild.members.me).has(PermissionsBitField.Flags.ViewChannel))
+        return interaction.reply({ content: `I do not have permission to join this channel <#${voiceChannel.id}>.`, ephemeral: true });
+        
         const menu = options.getSubcommand();
         const queue = await client.distube.getQueue(voiceChannel);
         
@@ -190,13 +197,13 @@ module.exports = {
         try {
             switch (menu) {
                 case "play": {
+                    await interaction.deferReply();
                     client.distube.play(member.voice.channel, options.getString("song"), {
                         member: member,
                         textChannel: channel,
                     });
 
-                    return interaction.reply({ content: "Searching..." })
-                    .then(_msg => { setTimeout(() => interaction.deleteReply().catch(), 4000) });
+                    return await interaction.deleteReply();
                 }
                 case "volume": {
                     let volume = options.getNumber("percentage")
@@ -288,13 +295,14 @@ module.exports = {
                     return interaction.reply({ content: "🔀 Song has been shuffled.", ephemeral: true });
                 }
                 case "relatedsong": {
-
+                    await interaction.deferReply({ ephemeral: true });
                     await queue.addRelatedSong();
                     
-                    return interaction.reply({ content: `🔄 **${queue.songs[queue.songs.length-1].name}** has been added.`, ephemeral: true });
+                    return interaction.editReply({ content: `🔄 **${queue.songs[queue.songs.length-1].name}** has been added.`, ephemeral: true });
                 }
                 case "jump": {
-                    if (queue.songs.length - 1 == 0) return interaction.reply({ content: "There's no song to jump to.", ephemeral: true });
+                    await interaction.deferReply({ ephemeral: true });
+                    if (queue.songs.length - 1 == 0) return interaction.editReply({ content: "There's no song to jump to.", ephemeral: true });
 
                     let position = options.getNumber("position");
                     if (position > queue.songs.length - 1) position = queue.songs.length - 1;
@@ -302,7 +310,7 @@ module.exports = {
                     let song = queue.songs[position];
                     queue.jump(position)
                     
-                    return interaction.reply({ content: `*️⃣ Jumped successfully.\n Loaded: **${song.name}**`, ephemeral: true });
+                    return interaction.editReply({ content: `*️⃣ Jumped successfully.\n Loaded: **${song.name}**`, ephemeral: true });
                 }
                 case "loop": {
                     let Mode2 = options.getString("mode");
@@ -316,7 +324,8 @@ module.exports = {
                     return interaction.reply({ content: `🔂 Autoplay is set to ${autoplay ? "On" : "Off"}`, ephemeral: true });
                 }
                 case "remove": {
-                    if (queue.songs.length - 1 == 0) return interaction.reply({ content: "There's no song to remove.", ephemeral: true });
+                    await interaction.deferReply({ ephemeral: true });
+                    if (queue.songs.length - 1 == 0) return interaction.editReply({ content: "There's no song to remove.", ephemeral: true });
                     let index = options.getNumber("index");
                     let lastIndex = options.getNumber("toindex");
 
@@ -328,32 +337,34 @@ module.exports = {
                     queue.songs.splice(index, amount>1 ? amount: 1);
                     const text = amount>1? `🔽 Successfully removed ${amount} song${amount > 1 ? "s" : ""}.`: `🔽 Successfully removed **${song.name}**.`
                     
-                    return interaction.reply({ content: `${text}`, ephemeral: true });
+                    return interaction.editReply({ content: `${text}`, ephemeral: true });
                 }
                 case "move": {
+                    await interaction.deferReply({ ephemeral: true });
                     let index = options.getNumber("fromindex");
                     let newIndex = options.getNumber("toindex");
 
                     if (index > queue.songs.length - 1)
-                    return interaction.reply({ content: `Song in index ${index} does not exist!`, ephemeral: true });
+                    return interaction.editReply({ content: `Song in index ${index} does not exist!`, ephemeral: true });
 
                     if (index == newIndex)
-                    return interaction.reply({ content: `You want to move index ${index} to the same index!??`, ephemeral: true });
+                    return interaction.editReply({ content: `You want to move index ${index} to the same index!??`, ephemeral: true });
 
                     let song = queue.songs[index];
                     queue.songs.splice(index, 1);
                     queue.addToQueue(song, newIndex);
 
-                    return interaction.reply({ content: `🔽 Successfully moved **${song.name}** to index ${index}`, ephemeral: true });
+                    return interaction.editReply({ content: `🔽 Successfully moved **${song.name}** to index ${index}`, ephemeral: true });
                 }
                 case "lyrics": {
+                    await interaction.deferReply({ ephemeral: true });
                     let songTitle = options.getString("title")
                     if (songTitle) {
                         let lyrics = await lyricsFinder("", songTitle) || "None"
 
                         if (lyrics === `None`)
-                            return interaction.reply({ content: `Lyrics not found...`, ephemeral: true })
-                        else return interaction.reply({
+                            return interaction.editReply({ content: `Lyrics not found...`, ephemeral: true })
+                        else return interaction.editReply({
                             embeds: [new EmbedBuilder()
                                 .setTitle(`${songTitle} - Lyrics`)
                                 .setDescription(lyrics)
@@ -362,15 +373,15 @@ module.exports = {
                     }
 
                     if (!guild.members.me.voice.channelId || !queue)
-                        return interaction.reply({ content: `There's no song playing in the queue.`, ephemeral: true });
+                        return interaction.editReply({ content: `There's no song playing in the queue.`, ephemeral: true });
                     
                     let currentsong = queue.songs[0];
                     let filterTitle = currentsong.name.toLowerCase().replace(/[\[\]()|+]*(music|audio|official|lyrics|lyric|video|mv|slowed|reverb|tik|tok|tiktok|\+)?[\[\]()|+]*/g, "")
                     let lyrics = await lyricsFinder("", filterTitle.trim()) || "None";
 
                     if (lyrics === `None`)
-                        return interaction.reply({ content: `Lyrics not found...`, ephemeral: true })
-                    else return interaction.reply({
+                        return interaction.editReply({ content: `Lyrics not found...`, ephemeral: true })
+                    else return interaction.editReply({
                         embeds: [new EmbedBuilder()
                             .setTitle(`${currentsong.name}`)
                             .setURL(currentsong.url)
@@ -379,11 +390,12 @@ module.exports = {
                         ], ephemeral: true });
                 }
                 case "nowplaying": {
+                    await interaction.deferReply({ ephemeral: true });
                     let currentsong = queue.songs[0];
                     const status = queue => `Volume: \`${queue.volume}%\` | Filter: \`${queue.filters.names.join(', ') || "Off"}\` | Loop: \`${queue.repeatMode ? (queue.repeatMode === 2 ? 'All Queue' : 'This Song') : 'Off'}\` | Autoplay: \`${queue.autoplay ? 'On' : 'Off'}\``;
                     const status1 = queue => `Requested by: **${currentsong.user}** | Duration: \`${queue.formattedCurrentTime} / ${currentsong.formattedDuration}\``;
 
-                    return interaction.reply({
+                    return interaction.editReply({
                         embeds: [new EmbedBuilder()
                             .setTitle(`${currentsong.name}`)
                             .setURL(currentsong.url)
@@ -407,14 +419,14 @@ module.exports = {
                         ], ephemeral: true });
                 }
                 case "forceplay": {
+                    await interaction.deferReply();
                     client.distube.play(member.voice.channel, options.getString("song"), {
                         member: member,
                         textChannel: channel,
                         skip: true
                     });
                     
-                    return interaction.reply({ content: "Searching..." })
-                    .then(_msg => { setTimeout(() => interaction.deleteReply().catch(), 4000) });
+                    return await interaction.deleteReply();
                 }
                 case "leave": {
                     if (!guild.members.me.voice.channelId)
@@ -425,13 +437,13 @@ module.exports = {
                     return interaction.reply({ content: `Leaving the <#${guild.members.me.voice.channelId}>`, ephemeral: true });
                 }
                 case "playnext": {
+                    await interaction.deferReply();
                     client.distube.play(member.voice.channel, options.getString("song"),{ 
                         textChannel: channel, 
                         member: member, 
                         position: 1 
                     });
-                    return interaction.reply({ content: "Searching..." })
-                    .then(_msg => { setTimeout(() => interaction.deleteReply().catch(e => console.log(e)), 3000) });
+                    return await interaction.deleteReply();
                 }
                 case "filter": {
                     let filter = options.getString("type");
@@ -447,13 +459,7 @@ module.exports = {
                 }
             }
         } catch (error) {
-            console.log(error)
-            const errorEmbed = new EmbedBuilder()
-                .setColor("#ED4245")
-                .setDescription(`⛔ Alert: ${error}`)
-            return interaction.reply({ embeds: [errorEmbed] });
+            console.log(error);
         }
     }
-
-
 }

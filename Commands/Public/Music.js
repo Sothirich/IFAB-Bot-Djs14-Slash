@@ -263,8 +263,13 @@ module.exports = {
                         });
                 }
                 case "skip": {
-                    queue.skip()
-                    return interaction.reply({ content: "⏩ Song has been skipped.", ephemeral: true });
+                    if (!queue.autoplay && queue.songs.length == 1) {
+                        queue.stop()
+                        return interaction.reply({ content: "⏩ Song has been skipped. And the queue now is empty!", ephemeral: true });
+                    } else {
+                        queue.skip()
+                        return interaction.reply({ content: "⏩ Song has been skipped.", ephemeral: true });
+                    }
                 }
                 case "pause": {
                     if (queue.paused) {

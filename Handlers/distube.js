@@ -69,6 +69,10 @@ function loadDistube(client) {
         })
         )
 
+        .on("noRelated", queue => queue.textChannel.send("Cannot find any related songs.")
+            .then(msg => { setTimeout(() => msg.delete().catch(e => console.log(e)), 5000) })
+        )
+
         .on('addSong', (queue, song) =>queue.textChannel.send({
             embeds: [new EmbedBuilder()
                 .setTitle("Added :thumbsup: " + song.name)

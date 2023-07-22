@@ -9,6 +9,7 @@ require('dotenv').config();
 function loadDistube(client) {
     client.distube = new DisTube(client, {
         leaveOnStop: false,
+        emitAddListWhenCreatingQueue: false,
         emitAddSongWhenCreatingQueue: false,
         emptyCooldown: 150,
         youtubeCookie: process.env.Cookie,

@@ -198,7 +198,7 @@ module.exports = {
             switch (menu) {
                 case "play": {
                     await interaction.deferReply();
-                    client.distube.play(member.voice.channel, options.getString("song"), {
+                    await client.distube.play(member.voice.channel, options.getString("song"), {
                         member: member,
                         textChannel: channel,
                     });
@@ -425,7 +425,7 @@ module.exports = {
                 }
                 case "forceplay": {
                     await interaction.deferReply();
-                    client.distube.play(member.voice.channel, options.getString("song"), {
+                    await client.distube.play(member.voice.channel, options.getString("song"), {
                         member: member,
                         textChannel: channel,
                         skip: true
@@ -443,7 +443,7 @@ module.exports = {
                 }
                 case "playnext": {
                     await interaction.deferReply();
-                    client.distube.play(member.voice.channel, options.getString("song"),{ 
+                    await client.distube.play(member.voice.channel, options.getString("song"),{ 
                         textChannel: channel, 
                         member: member, 
                         position: 1 
@@ -465,6 +465,10 @@ module.exports = {
             }
         } catch (error) {
             console.log(error);
+            const errorEmbed = new EmbedBuilder()
+                .setColor("#ED4245")
+                .setDescription(`⛔ Alert: ${error}`)
+            return interaction.editReply({ embeds: [errorEmbed] });
         }
     }
 }

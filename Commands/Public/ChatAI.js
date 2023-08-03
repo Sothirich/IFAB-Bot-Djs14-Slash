@@ -18,35 +18,37 @@ module.exports = {
      * @param {Client} client 
      */
     async execute(interaction, client) {
-        await interaction.deferReply()
 
-        interaction.editReply({ embeds: [new EmbedBuilder().setAuthor({ name: `${client.user.username} is generating response...`, iconURL: client.user.displayAvatarURL() })] })
+        return interaction.reply({embeds: [new EmbedBuilder().setAuthor({ name: `Functions under maintenance!`, iconURL: client.user.displayAvatarURL() })]})
+
+        // await interaction.deferReply()
+
+        // interaction.editReply({ embeds: [new EmbedBuilder().setAuthor({ name: `${client.user.username} is generating response...`, iconURL: client.user.displayAvatarURL() })] })
         
-        try {
-            const configuration = new Configuration({
-                apiKey: process.env.ChatGPT,
-            })
+        // try {
+        //     const configuration = new Configuration({
+        //         apiKey: process.env.ChatGPT,
+        //     })
 
-            const openai = new OpenAIApi(configuration)
-
-            const response = await openai.createCompletion({
-                model: "text-davinci-003",
-                prompt: interaction.options.getString('text'),
-                temperature: 0,
-                max_tokens: 2048
-            });
+        //     const openai = new OpenAIApi(configuration)
+        //     const response = await openai.createChatCompletion({
+        //         model: "text-davinci-003",
+        //         prompt: interaction.options.getString('text'),
+        //         temperature: 0,
+        //         max_tokens: 2048
+        //     });
             
-            const Embed = new EmbedBuilder()
-            .setDescription(`**${interaction.options.getString("text")}**\n\n\`\`\`${response.data.choices[0].text}\`\`\``)
-            .setAuthor({ name: interaction.user.username, iconURL: interaction.user.displayAvatarURL() })
-            .setTimestamp()
-            .setFooter({ text: client.user.username })
+        //     const Embed = new EmbedBuilder()
+        //     .setDescription(`**${interaction.options.getString("text")}**\n\n\`\`\`${response.data.choices[0].text}\`\`\``)
+        //     .setAuthor({ name: interaction.user.username, iconURL: interaction.user.displayAvatarURL() })
+        //     .setTimestamp()
+        //     .setFooter({ text: client.user.username })
 
-            return interaction.editReply({ embeds: [Embed] })
-        } catch (error) {
-            if (error) console.log(error)
+        //     return interaction.editReply({ embeds: [Embed] })
+        // } catch (error) {
+        //     if (error) console.log(error)
 
-            return interaction.editReply({embeds: [new EmbedBuilder().setAuthor({ name: `Something went wrong... Please try again later!`, iconURL: client.user.displayAvatarURL() })]})
-        }
+        //     return interaction.editReply({embeds: [new EmbedBuilder().setAuthor({ name: `Something went wrong... Please try again later!`, iconURL: client.user.displayAvatarURL() })]})
+        // }
     }
 }

@@ -13,7 +13,6 @@ function loadDistube(client) {
         emitAddSongWhenCreatingQueue: false,
         emptyCooldown: 150,
         youtubeCookie: process.env.Cookie,
-        youtubeIdentityToken: process.env.identityToken,
         plugins: [
             new SpotifyPlugin({
                 parallel: false,
@@ -24,7 +23,7 @@ function loadDistube(client) {
                 },
             }),
             new YtDlpPlugin({
-                update: true
+                update: false
             }),
             new SoundCloudPlugin(),
             new DeezerPlugin(),

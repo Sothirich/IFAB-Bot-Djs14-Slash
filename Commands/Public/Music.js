@@ -201,8 +201,8 @@ module.exports = {
                     await client.distube.play(member.voice.channel, options.getString("song"), {
                         member: member,
                         textChannel: channel,
-                    }).catch(err => {
-                        interaction.editReply(err);
+                    }).catch(async err => {
+                        return await interaction.editReply(err);
                     });
 
                     return await interaction.deleteReply();

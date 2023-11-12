@@ -1,4 +1,4 @@
-const { GuildMember, EmbedBuilder, AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
+const { GuildMember, EmbedBuilder, AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionsBitField } = require("discord.js");
 const moment = require('moment')
 const { profileImage } = require('discord-arts')
 
@@ -22,6 +22,12 @@ module.exports = {
         const memberLogChannel = (await member.guild.channels.fetch()).get(guildConfig.memberLogChannel)
         const welcomeLogChannel = (await member.guild.channels.fetch()).get(guildConfig.welcomeLogChannel)
         if (!memberLogChannel) return;
+
+        if (!memberLogChannel.permissionsFor(client.user).has(PermissionsBitField.Flags.ViewChannel || PermissionsBitField.Flags.SendMessages))
+        return;
+
+        if (!welcomeLogChannel.permissionsFor(client.user).has(PermissionsBitField.Flags.ViewChannel || PermissionsBitField.Flags.SendMessages))
+        return;
 
         let color = "#74e21e"
         let risk = "Fairly Safe"

@@ -179,11 +179,11 @@ module.exports = {
         if (!voiceChannel)
         return interaction.reply({ content: "You must be in a voice channel to use music commands.", ephemeral: true });
         
-        if (!channel.permissionsFor(guild.members.me).has(PermissionsBitField.Flags.ViewChannel))
+        if (!channel.permissionsFor(guild.members.me).has(PermissionsBitField.Flags.ViewChannel || PermissionsBitField.Flags.SendMessages))
         return interaction.reply({ content: `I do not have permission to view this channel <#${channel.id}>`, ephemeral: true });
 
-        if (!voiceChannel.permissionsFor(guild.members.me).has(PermissionsBitField.Flags.ViewChannel))
-        return interaction.reply({ content: `I do not have permission to join this channel <#${voiceChannel.id}>.`, ephemeral: true });
+        if (!voiceChannel.permissionsFor(guild.members.me).has(PermissionsBitField.Flags.ViewChannel || PermissionsBitField.Flags.Connect))
+        return interaction.reply({ content: `I do not have permission to view/join this channel <#${voiceChannel.id}>.`, ephemeral: true });
         
         const menu = options.getSubcommand();
         const queue = await client.distube.getQueue(voiceChannel);

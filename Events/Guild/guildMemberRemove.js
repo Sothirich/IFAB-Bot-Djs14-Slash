@@ -1,4 +1,4 @@
-const { GuildMember, EmbedBuilder } = require("discord.js");
+const { GuildMember, EmbedBuilder, PermissionsBitField } = require("discord.js");
 
 module.exports = {
     name: "guildMemberRemove",
@@ -12,6 +12,9 @@ module.exports = {
         const memberLogChannel = (await member.guild.channels.fetch()).get(guildConfig.memberLogChannel)
         if (!memberLogChannel) return;
 
+        if (!memberLogChannel.permissionsFor(client.user).has(PermissionsBitField.Flags.ViewChannel || PermissionsBitField.Flags.SendMessages))
+        return;
+        
         const accountCreation = parseInt(member.user.createdTimestamp / 1000)
         
         const Embed = new EmbedBuilder()

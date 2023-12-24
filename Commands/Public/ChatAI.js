@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, Client } = require("discord.js")
-const { Configuration, OpenAIApi } = require("openai")
+// const { Configuration, OpenAIApi } = require("openai")
 require('dotenv').config();
 
 module.exports = {

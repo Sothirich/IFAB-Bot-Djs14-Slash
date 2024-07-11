@@ -4,29 +4,27 @@ const { SpotifyPlugin } = require('@distube/spotify')
 const { SoundCloudPlugin } = require('@distube/soundcloud')
 const { YtDlpPlugin } = require('@distube/yt-dlp')
 const { DeezerPlugin } = require("@distube/deezer");
+const { YouTubePlugin } =  require("@distube/youtube");
+const fs = require("fs");
 require('dotenv').config();
 
 function loadDistube(client) {
     client.distube = new DisTube(client, {
-        leaveOnStop: false,
         emitAddListWhenCreatingQueue: false,
         emitAddSongWhenCreatingQueue: false,
-        emptyCooldown: 150,
-        youtubeCookie: process.env.Cookie,
+        savePreviousSongs: false,
         plugins: [
+            new YouTubePlugin({cookies: JSON.parse(fs.readFileSync("cookies.json"))}),
             new SpotifyPlugin({
-                parallel: false,
                 api: {
                     clientId: process.env.SpotifyID,
                     clientSecret: process.env.SpotifySecret,
                     topTracksCountry: "KH",
                 },
             }),
-            new YtDlpPlugin({
-                update: false
-            }),
             new SoundCloudPlugin(),
             new DeezerPlugin(),
+            new YtDlpPlugin({ update: false }),
         ],
         customFilters: {
             "8D": "apulsator=hz=0.08",
@@ -142,9 +140,8 @@ function loadDistube(client) {
         }).then(msg => { setTimeout(() => msg.delete().catch(e => console.log(e)), 20000) })
         )
 
-        .on('error', (channel, e) => {
-            if (channel) channel.send(`🛑 An ERROR encountered:\n ${e.toString().slice(0, 1974)}`)
-            else console.error(e)
+        .on('error', (e, queue, song) => {
+            queue.textChannel.send(`🛑 An ERROR encountered:\n ${e.toString().slice(0, 1974)}`);
         })
 
         .on('finishSong', queue => {

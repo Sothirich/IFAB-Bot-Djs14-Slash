@@ -15,18 +15,18 @@
     "@distube/deezer": "^2.0.1",
     "@distube/soundcloud": "^2.0.3",
     "@distube/spotify": "^2.0.2",
-    "@distube/youtube": "^1.0.2",
+    "@distube/youtube": "^1.0.4",
     "@distube/yt-dlp": "^2.0.1",
-    "@distube/ytdl-core": "^4.13.5",
+    "@distube/ytdl-core": "github:XM4ZE/ytdl-core",
     "ascii-table": "^0.0.9",
     "discord-arts": "^0.6.1",
-    "discord.js": "^14.15.3",
+    "discord.js": "^14.16.3",
     "distube": "^5.0.2",
     "dotenv": "^16.4.5",
     "glob": "^11.0.0",
     "lyrics-finder": "^21.7.0",
     "moment": "^2.30.1",
-    "mongoose": "^8.5.0",
-    "sodium-native": "^4.1.1"
+    "mongoose": "^8.7.1",
+    "sodium-native": "^4.2.1"
   }
 }

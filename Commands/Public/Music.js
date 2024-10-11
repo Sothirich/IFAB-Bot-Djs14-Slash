@@ -439,7 +439,7 @@ module.exports = {
                     if (!guild.members.me.voice.channelId)
                         return interaction.reply({ content: `I'm not in the channel. So how can you kick me?!`, ephemeral: true });
 
-                    client.distube.voices.leave(voiceChannel);
+                    client.distube.voices.leave(guild);
 
                     return interaction.reply({ content: `Leaving the <#${guild.members.me.voice.channelId}>`, ephemeral: true });
                 }

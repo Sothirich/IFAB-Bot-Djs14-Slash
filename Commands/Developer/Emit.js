@@ -29,7 +29,7 @@ module.exports = {
                 client.emit("guildMemberAdd", interaction.member)
                 interaction.reply({
                     content: "Emitted GuildMemberAdd",
-                    ephemeral: true
+                    flags: 64
                 })
             }
             break
@@ -37,7 +37,7 @@ module.exports = {
                 client.emit("guildMemberRemove", interaction.member)
                 interaction.reply({
                     content: "Emitted GuildMemberRemove",
-                    ephemeral: true
+                    flags: 64
                 })
             }
             break

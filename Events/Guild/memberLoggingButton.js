@@ -27,7 +27,7 @@ module.exports = {
 
         if(errorArray.length) return interaction.reply({
             embeds: [Embed.setDescription(errorArray.join("\n"))],
-            ephemeral: true
+            flags: 64
         })
 
         switch(splitArray[1]) {

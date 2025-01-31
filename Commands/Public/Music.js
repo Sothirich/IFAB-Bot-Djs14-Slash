@@ -177,22 +177,22 @@ module.exports = {
         const voiceChannel = member.voice.channel;
         
         if (!voiceChannel)
-        return interaction.reply({ content: "You must be in a voice channel to use music commands.", ephemeral: true });
+        return interaction.reply({ content: "You must be in a voice channel to use music commands.", flags: 64 });
         
         if (!guild.members.me.permissionsIn(channel).has(PermissionsBitField.Flags.ViewChannel || PermissionsBitField.Flags.SendMessages))
-        return interaction.reply({ content: `I do not have permission to view this channel <#${channel.id}>`, ephemeral: true });
+        return interaction.reply({ content: `I do not have permission to view this channel <#${channel.id}>`, flags: 64 });
 
         if (!guild.members.me.permissionsIn(voiceChannel).has(PermissionsBitField.Flags.ViewChannel || PermissionsBitField.Flags.Connect))
-        return interaction.reply({ content: `I do not have permission to view/join this channel <#${voiceChannel.id}>.`, ephemeral: true });
+        return interaction.reply({ content: `I do not have permission to view/join this channel <#${voiceChannel.id}>.`, flags: 64 });
         
         const menu = options.getSubcommand();
         const queue = await client.distube.getQueue(voiceChannel);
         
         if (guild.members.me.voice.channelId && voiceChannel.id !== guild.members.me.voice.channelId && queue)
-            return interaction.reply({ content: `I'm already in <#${guild.members.me.voice.channelId}>`, ephemeral: true });
+            return interaction.reply({ content: `I'm already in <#${guild.members.me.voice.channelId}>`, flags: 64 });
 
         if (!["lyrics", "play", "forceplay", "playnext", "leave"].includes(menu) && !queue) 
-            return interaction.reply({ content: "There is no queue.", ephemeral: true });
+            return interaction.reply({ content: "There is no queue.", flags: 64 });
 
         try {
             switch (menu) {
@@ -211,7 +211,7 @@ module.exports = {
                     let volume = options.getNumber("percentage")
                     queue.setVolume(volume)
 
-                    return interaction.reply({ content: `Volume has been set to \`${volume}%\``, ephemeral: true });
+                    return interaction.reply({ content: `Volume has been set to \`${volume}%\``, flags: 64 });
                 }
                 case "queue": {
                     let currentPage = 0;
@@ -227,7 +227,7 @@ module.exports = {
                                 .setColor('#ED4245')
                                 .setDescription(`__Now Playing:__\n${queue.songs.map(song => `**[${song.name}](${song.url})** | \`${song.formattedDuration}\` | \`Requested By: ${song.user.tag}\``).slice(0, 1).join("\n")}\n`)
                                 .setFooter({text: 'Page: 0'})
-                            ], ephemeral: true });
+                            ], flags: 64 });
 
                     const embeds = [];
                         let k = 0;
@@ -267,49 +267,49 @@ module.exports = {
                 case "skip": {
                     if (!queue.autoplay && queue.songs.length == 1) {
                         queue.stop()
-                        return interaction.reply({ content: "⏩ Song has been skipped. And the queue now is empty!", ephemeral: true });
+                        return interaction.reply({ content: "⏩ Song has been skipped. And the queue now is empty!", flags: 64 });
                     } else {
                         queue.skip()
-                        return interaction.reply({ content: "⏩ Song has been skipped.", ephemeral: true });
+                        return interaction.reply({ content: "⏩ Song has been skipped.", flags: 64 });
                     }
                 }
                 case "pause": {
                     if (queue.paused) {
                         queue.resume()
-                        return interaction.reply({ content: "⏯ Song has been resumed for you xD.", ephemeral: true });
+                        return interaction.reply({ content: "⏯ Song has been resumed for you xD.", flags: 64 });
                     }
                     queue.pause()
 
-                    return interaction.reply({ content: "⏸ Song has been paused.", ephemeral: true });
+                    return interaction.reply({ content: "⏸ Song has been paused.", flags: 64 });
                 }
                 case "resume": {
                     if (queue.paused) {
                         queue.resume()
 
-                        return interaction.reply({ content: "⏯ Song has been resumed.", ephemeral: true });
+                        return interaction.reply({ content: "⏯ Song has been resumed.", flags: 64 });
                     } else {
-                        return interaction.reply({ content: "🚫 The queue is not paused!", ephemeral: true });
+                        return interaction.reply({ content: "🚫 The queue is not paused!", flags: 64 });
                     }
                 }
                 case "clear": {
                     queue.stop()
 
-                    return interaction.reply({ content: `⏹ Cleared the Queue.`, ephemeral: true });
+                    return interaction.reply({ content: `⏹ Cleared the Queue.`, flags: 64 });
                 }
                 case "shuffle": {
                     queue.shuffle();
 
-                    return interaction.reply({ content: "🔀 Song has been shuffled.", ephemeral: true });
+                    return interaction.reply({ content: "🔀 Song has been shuffled.", flags: 64 });
                 }
                 case "relatedsong": {
-                    await interaction.deferReply({ ephemeral: true });
+                    await interaction.deferReply({ flags: 64 });
                     await queue.addRelatedSong();
                     
-                    return interaction.editReply({ content: `🔄 **${queue.songs[queue.songs.length-1].name}** has been added.`, ephemeral: true });
+                    return interaction.editReply({ content: `🔄 **${queue.songs[queue.songs.length-1].name}** has been added.`, flags: 64 });
                 }
                 case "jump": {
-                    await interaction.deferReply({ ephemeral: true });
-                    if (queue.songs.length - 1 == 0) return interaction.editReply({ content: "There's no song to jump to.", ephemeral: true });
+                    await interaction.deferReply({ flags: 64 });
+                    if (queue.songs.length - 1 == 0) return interaction.editReply({ content: "There's no song to jump to.", flags: 64 });
 
                     let position = options.getNumber("position");
                     if (position > queue.songs.length - 1) position = queue.songs.length - 1;
@@ -317,22 +317,22 @@ module.exports = {
                     let song = queue.songs[position];
                     queue.jump(position)
                     
-                    return interaction.editReply({ content: `*️⃣ Jumped successfully.\n Loaded: **${song.name}**`, ephemeral: true });
+                    return interaction.editReply({ content: `*️⃣ Jumped successfully.\n Loaded: **${song.name}**`, flags: 64 });
                 }
                 case "loop": {
                     let Mode2 = options.getString("mode");
                     queue.setRepeatMode(parseInt(Mode2));
 
-                    return interaction.reply({ content: `🔁 Loop is set to **${Mode2 == 1 ? "Song-Loop" : Mode2 == 2 ? "Queue-Loop" : "Off"}**`, ephemeral: true });
+                    return interaction.reply({ content: `🔁 Loop is set to **${Mode2 == 1 ? "Song-Loop" : Mode2 == 2 ? "Queue-Loop" : "Off"}**`, flags: 64 });
                 }
                 case "autoplay": {
                     let autoplay = queue.toggleAutoplay();
 
-                    return interaction.reply({ content: `🔂 Autoplay is set to ${autoplay ? "On" : "Off"}`, ephemeral: true });
+                    return interaction.reply({ content: `🔂 Autoplay is set to ${autoplay ? "On" : "Off"}`, flags: 64 });
                 }
                 case "remove": {
-                    await interaction.deferReply({ ephemeral: true });
-                    if (queue.songs.length - 1 == 0) return interaction.editReply({ content: "There's no song to remove.", ephemeral: true });
+                    await interaction.deferReply({ flags: 64 });
+                    if (queue.songs.length - 1 == 0) return interaction.editReply({ content: "There's no song to remove.", flags: 64 });
                     let index = options.getNumber("index");
                     let lastIndex = options.getNumber("toindex");
 
@@ -344,60 +344,60 @@ module.exports = {
                     queue.songs.splice(index, amount>1 ? amount: 1);
                     const text = amount>1? `🔽 Successfully removed ${amount} song${amount > 1 ? "s" : ""}.`: `🔽 Successfully removed **${song.name}**.`
                     
-                    return interaction.editReply({ content: `${text}`, ephemeral: true });
+                    return interaction.editReply({ content: `${text}`, flags: 64 });
                 }
                 case "move": {
-                    await interaction.deferReply({ ephemeral: true });
+                    await interaction.deferReply({ flags: 64 });
                     let index = options.getNumber("fromindex");
                     let newIndex = options.getNumber("toindex");
 
                     if (index > queue.songs.length - 1)
-                    return interaction.editReply({ content: `Song in index ${index} does not exist!`, ephemeral: true });
+                    return interaction.editReply({ content: `Song in index ${index} does not exist!`, flags: 64 });
 
                     if (index == newIndex)
-                    return interaction.editReply({ content: `You want to move index ${index} to the same index!??`, ephemeral: true });
+                    return interaction.editReply({ content: `You want to move index ${index} to the same index!??`, flags: 64 });
 
                     let song = queue.songs[index];
                     queue.songs.splice(index, 1);
                     queue.addToQueue(song, newIndex);
 
-                    return interaction.editReply({ content: `🔽 Successfully moved **${song.name}** to index ${index}`, ephemeral: true });
+                    return interaction.editReply({ content: `🔽 Successfully moved **${song.name}** to index ${index}`, flags: 64 });
                 }
                 case "lyrics": {
-                    await interaction.deferReply({ ephemeral: true });
+                    await interaction.deferReply({ flags: 64 });
                     let songTitle = options.getString("title")
                     if (songTitle) {
                         let lyrics = await lyricsFinder("", songTitle) || "None"
 
                         if (lyrics === `None`)
-                            return interaction.editReply({ content: `Lyrics not found...`, ephemeral: true })
+                            return interaction.editReply({ content: `Lyrics not found...`, flags: 64 })
                         else return interaction.editReply({
                             embeds: [new EmbedBuilder()
                                 .setTitle(`${songTitle} - Lyrics`)
                                 .setDescription(lyrics)
                             ]
-                            , ephemeral: true });
+                            , flags: 64 });
                     }
 
                     if (!guild.members.me.voice.channelId || !queue)
-                        return interaction.editReply({ content: `There's no song playing in the queue.`, ephemeral: true });
+                        return interaction.editReply({ content: `There's no song playing in the queue.`, flags: 64 });
                     
                     let currentsong = queue.songs[0];
                     let filterTitle = currentsong.name.toLowerCase().replace(/[\[\]()|+]*(music|audio|official|lyrics|lyric|video|mv|slowed|reverb|tik|tok|tiktok|\+)?[\[\]()|+]*/g, "")
                     let lyrics = await lyricsFinder("", filterTitle.trim()) || "None";
 
                     if (lyrics === `None`)
-                        return interaction.editReply({ content: `Lyrics not found...`, ephemeral: true })
+                        return interaction.editReply({ content: `Lyrics not found...`, flags: 64 })
                     else return interaction.editReply({
                         embeds: [new EmbedBuilder()
                             .setTitle(`${currentsong.name}`)
                             .setURL(currentsong.url)
                             .setThumbnail(currentsong.thumbnail)
                             .setDescription(lyrics)
-                        ], ephemeral: true });
+                        ], flags: 64 });
                 }
                 case "nowplaying": {
-                    await interaction.deferReply({ ephemeral: true });
+                    await interaction.deferReply({ flags: 64 });
                     let currentsong = queue.songs[0];
                     const status = queue => `Volume: \`${queue.volume}%\` | Filter: \`${queue.filters.names.join(', ') || "Off"}\` | Loop: \`${queue.repeatMode ? (queue.repeatMode === 2 ? 'All Queue' : 'This Song') : 'Off'}\` | Autoplay: \`${queue.autoplay ? 'On' : 'Off'}\``;
                     const status1 = queue => `Requested by: **${currentsong.user}** | Duration: \`${queue.formattedCurrentTime} / ${currentsong.formattedDuration}\``;
@@ -423,7 +423,7 @@ module.exports = {
                             .setThumbnail(currentsong.thumbnail)
                             .setFooter({ text: `${guild.name}`, iconURL: guild.iconURL({ dynamic: true }) })
                             .setTimestamp()
-                        ], ephemeral: true });
+                        ], flags: 64 });
                 }
                 case "forceplay": {
                     await interaction.deferReply();
@@ -437,11 +437,11 @@ module.exports = {
                 }
                 case "leave": {
                     if (!guild.members.me.voice.channelId)
-                        return interaction.reply({ content: `I'm not in the channel. So how can you kick me?!`, ephemeral: true });
+                        return interaction.reply({ content: `I'm not in the channel. So how can you kick me?!`, flags: 64 });
 
                     client.distube.voices.leave(guild);
 
-                    return interaction.reply({ content: `Leaving the <#${guild.members.me.voice.channelId}>`, ephemeral: true });
+                    return interaction.reply({ content: `Leaving the <#${guild.members.me.voice.channelId}>`, flags: 64 });
                 }
                 case "playnext": {
                     await interaction.deferReply();
@@ -462,7 +462,7 @@ module.exports = {
                         queue.filters.add(filter)
                     }
 
-                    return interaction.reply({ content: `🔁 Filter is set to **${options.getString("type")}**`, ephemeral: true });
+                    return interaction.reply({ content: `🔁 Filter is set to **${options.getString("type")}**`, flags: 64 });
                 }
             }
         } catch (error) {

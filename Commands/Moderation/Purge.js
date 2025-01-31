@@ -43,14 +43,14 @@ module.exports = {
             channel.bulkDelete(filtered, true).then(messages => {
                 interaction.reply({
                     embeds: [Embed.setDescription(`🧹 Cleared ${messages.size} message(s) from ${Target}.`)], 
-                    ephemeral: true
+                    flags: 64
                 })
             })
         } else {
             channel.bulkDelete(Amount, true).then(messages => {
                 interaction.reply({
                     embeds: [Embed.setDescription(`🧹 Cleared ${messages.size} message(s) from this channel.`)],
-                    ephemeral: true
+                    flags: 64
                 })
             })
         }

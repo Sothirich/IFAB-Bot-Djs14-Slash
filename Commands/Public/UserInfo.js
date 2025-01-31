@@ -21,7 +21,7 @@ module.exports = {
 
         if(member.user.bot) return interaction.editReply({
             embeds: [new EmbedBuilder().setDescription("At this moment, bots are not supported for this command.")],
-            ephemeral: true
+            flags: 64
         })
 
         try {

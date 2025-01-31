@@ -29,7 +29,7 @@ module.exports = {
         try {
             switch(choice) {
                 case "events": {
-                    await interaction.deferReply({ ephemeral: true });
+                    await interaction.deferReply({ flags: 64 });
     
                     for (const [key, value] of client.events)
                         client.removeListener(`${key}`, value, true)
@@ -37,16 +37,16 @@ module.exports = {
                     loadEvents(client)
                     return interaction.editReply({
                         content: 'Reloaded Events.',
-                        ephemeral: true
+                        flags: 64
                     });
                 }
                 case "commands": {
-                    await interaction.deferReply({ ephemeral: true });
+                    await interaction.deferReply({ flags: 64 });
     
                     loadCommands(client)
                     return interaction.editReply({
                         content: 'Reloaded Commands.',
-                        ephemeral: true
+                        flags: 64
                     });
                 }
             }

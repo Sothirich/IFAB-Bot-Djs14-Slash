@@ -14,7 +14,16 @@ function loadDistube(client) {
         emitAddSongWhenCreatingQueue: false,
         savePreviousSongs: false,
         plugins: [
-            new YouTubePlugin({cookies: JSON.parse(fs.readFileSync("cookies.json"))}),
+            new YouTubePlugin({
+                cookies: JSON.parse(fs.readFileSync("cookies.json")),
+                ytdlOptions: {
+                    agent: {
+                        pipelining: 5,
+                        maxRedirections: 0,
+                        localAddress: "127.0.0.1",
+                    },
+                }
+            }),
             new SpotifyPlugin({
                 api: {
                     clientId: process.env.SpotifyID,

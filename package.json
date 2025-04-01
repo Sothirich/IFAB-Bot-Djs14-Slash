@@ -27,6 +27,6 @@
     "lyrics-finder": "^21.7.0",
     "moment": "^2.30.1",
     "mongoose": "^8.13.1",
-    "sodium-native": "^4.3.3"
+    "sodium-native": "^5.0.0"
   }
 }

@@ -17,11 +17,12 @@ function loadDistube(client) {
             new YouTubePlugin({
                 cookies: JSON.parse(fs.readFileSync("cookies.json")),
                 ytdlOptions: {
-                    agent: {
-                        pipelining: 5,
-                        maxRedirections: 0,
-                        localAddress: "127.0.0.1",
+                    requestOptions: {
+                        headers: {
+                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
+                        }
                     },
+                    playerClients: ['WEB']
                 }
             }),
             new SpotifyPlugin({

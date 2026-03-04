@@ -16,14 +16,14 @@ function loadDistube(client) {
         plugins: [
             new YouTubePlugin({
                 cookies: JSON.parse(fs.readFileSync("cookies.json")),
-                ytdlOptions: {
-                    requestOptions: {
-                        headers: {
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
-                        }
-                    },
-                    playerClients: ['WEB']
-                }
+                // ytdlOptions: {
+                //     requestOptions: {
+                //         headers: {
+                //             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36",
+                //         }
+                //     },
+                //     playerClients: ['WEB']
+                // }
             }),
             new SpotifyPlugin({
                 api: {
@@ -154,7 +154,12 @@ function loadDistube(client) {
             queue.textChannel.send(`🛑 An ERROR encountered:\n ${e.toString().slice(0, 1974)}`);
         })
 
-        .on('finishSong', queue => {
+        .on('finishSong', async ( queue, song ) => {
+            const related = await client.distube.searchSong(song.name, { limit: 1 });
+            if (related && related[0]) {
+                queue.play(related[0]);
+            }
+                
             const messageDelete = client.messageDelete.get(queue.textChannel.guildId)
 
             if (messageDelete) queue.textChannel.messages.fetch(messageDelete.messageId)
@@ -179,7 +184,7 @@ function loadDistube(client) {
         )
 
         .on("initQueue", queue => {
-            queue.autoplay = true;
+            queue.autoplay = false;
             queue.volume = 100;
         })
 };

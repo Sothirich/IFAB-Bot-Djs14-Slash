@@ -277,6 +277,8 @@ module.exports = {
                     break;
                 }
                 case "autoplay": {
+                    return interaction.reply({embeds: [new EmbedBuilder().setAuthor({ name: `Functions under maintenance!`, iconURL: client.user.displayAvatarURL() })]})
+                    
                     if (!queue) return sendError(interaction, "No queue found.");
                     const autoplay = queue.toggleAutoplay();
                     await interaction.reply({ content: `🔂 Autoplay is set to ${autoplay ? "On" : "Off"}`, flags: 64 });

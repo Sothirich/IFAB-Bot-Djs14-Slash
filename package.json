@@ -19,6 +19,7 @@
     "@distube/youtube": "^1.0.4",
     "@distube/yt-dlp": "^2.0.1",
     "@distube/ytdl-core": "https://codeload.github.com/ToddyTheNoobDud/ytdl-core-stuff/tar.gz/refs/heads/master",
+    "@snazzah/davey": "^0.1.10",
     "ascii-table": "^0.0.9",
     "discord-arts": "^0.7.1",
     "discord.js": "^14.25.1",
@@ -28,6 +29,11 @@
     "lyrics-finder": "^21.7.0",
     "moment": "^2.30.1",
     "mongoose": "^8.23.0",
+    "opusscript": "^0.0.8",
     "sodium-native": "^5.0.10"
+  },
+  "overrides": {
+    "tar": "^7.5.10",
+    "undici": "^7.22.0"
   }
 }

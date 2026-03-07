@@ -154,12 +154,7 @@ function loadDistube(client) {
             queue.textChannel.send(`🛑 An ERROR encountered:\n ${e.toString().slice(0, 1974)}`);
         })
 
-        .on('finishSong', async ( queue, song ) => {
-            const related = await client.distube.searchSong(song.name, { limit: 1 });
-            if (related && related[0]) {
-                queue.play(related[0]);
-            }
-                
+        .on('finishSong', queue => {
             const messageDelete = client.messageDelete.get(queue.textChannel.guildId)
 
             if (messageDelete) queue.textChannel.messages.fetch(messageDelete.messageId)

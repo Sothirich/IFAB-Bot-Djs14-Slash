@@ -11,7 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "@discordjs/opus": "^0.10.0",
-    "@discordjs/voice": "^0.19.0",
+    "@discordjs/voice": "^0.19.2",
     "@distube/deezer": "^2.0.1",
     "@distube/direct-link": "^1.0.1",
     "@distube/soundcloud": "^2.0.4",

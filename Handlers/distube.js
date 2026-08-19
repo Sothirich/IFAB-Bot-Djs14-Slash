@@ -16,6 +16,41 @@ const YOUTUBE_USER_AGENT =
 // These clients do not require a browser-based PO-token provider. You can
 // override this only if YouTube changes its client requirements again.
 const YTDLP_PLAYER_CLIENTS = process.env.YTDLP_PLAYER_CLIENTS || "web_embedded,android_vr";
+
+function normalizedTrackTitle(value) {
+    return String(value ?? "")
+        .toLowerCase()
+        .replace(/\([^)]*\)|\[[^\]]*\]|\{[^}]*\}/g, " ")
+        .replace(/\b(official|music video|video|audio|lyrics?|lyric video|visualizer|live|hd|4k|remaster(?:ed)?|sped up|slowed|reverb|nightcore|bass boosted|cover|karaoke|instrumental|clean|explicit|full song)\b/g, " ")
+        .replace(/[^\p{L}\p{N}]+/gu, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function isSameTrack(current, candidate) {
+    if (current.id && current.id === candidate.id) return true;
+
+    const currentTitle = normalizedTrackTitle(current.name);
+    const candidateTitle = normalizedTrackTitle(candidate.name);
+    if (!currentTitle || !candidateTitle) return false;
+    if (currentTitle === candidateTitle) return true;
+
+    const [shorter, longer] = currentTitle.length <= candidateTitle.length
+        ? [currentTitle, candidateTitle]
+        : [candidateTitle, currentTitle];
+    return shorter.length >= 5 && ` ${longer} `.includes(` ${shorter} `);
+}
+
+function uniqueRecommendations(current, candidates) {
+    const seenTitles = new Set();
+    return candidates.filter(candidate => {
+        if (!(candidate instanceof Song) || isSameTrack(current, candidate)) return false;
+        const title = normalizedTrackTitle(candidate.name) || candidate.id;
+        if (seenTitles.has(title)) return false;
+        seenTitles.add(title);
+        return true;
+    });
+}
 const ytDlpBinary = path.join(
     __dirname,
     "..",
@@ -251,20 +286,21 @@ class ResilientYouTubePlugin extends YouTubePlugin {
     async getRelatedSongs(song) {
         try {
             const related = await super.getRelatedSongs(song);
-            if (related.length) return related;
+            const uniqueRelated = uniqueRecommendations(song, related);
+            if (uniqueRelated.length) return uniqueRelated;
         } catch (error) {
             console.warn(`[YouTube] Related-song lookup failed: ${error.message}`);
         }
 
         // Recent YouTube responses can omit related_videos entirely. Autoplay
-        // still needs a next track, so use the current title/uploader as a
-        // lightweight recommendation search instead.
-        const query = [song.uploader?.name, song.name].filter(Boolean).join(" ").trim();
+        // still needs a next track, so use the current title as a lightweight
+        // recommendation search instead.
+        const query = song.name?.trim();
         if (!query) return [];
 
         try {
-            const matches = await this.search(query, { type: "video", limit: 5 });
-            return matches.filter(candidate => candidate instanceof Song && candidate.id !== song.id);
+            const matches = await this.search(query, { type: "video", limit: 20 });
+            return uniqueRecommendations(song, matches);
         } catch (error) {
             console.warn(`[YouTube] Autoplay fallback search failed: ${error.message}`);
             return [];

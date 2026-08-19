@@ -207,10 +207,10 @@ module.exports = {
                 case "skip": {
                     if (!queue) return sendError(interaction, "No queue found.");
                     if (!queue.autoplay && queue.songs.length === 1) {
-                        queue.stop();
+                        await queue.stop();
                         await interaction.reply({ content: "⏩ Song has been skipped. And the queue now is empty!", flags: 64 });
                     } else {
-                        queue.skip();
+                        await queue.skip();
                         await interaction.reply({ content: "⏩ Song has been skipped.", flags: 64 });
                     }
                     break;
@@ -264,7 +264,7 @@ module.exports = {
                     let position = options.getNumber("position");
                     position = Math.min(position, queue.songs.length - 1);
                     const song = queue.songs[position];
-                    queue.jump(position);
+                    await queue.jump(position);
                     await interaction.editReply({ content: `*️⃣ Jumped successfully.\nLoaded: **${song.name}**`, flags: 64 });
                     break;
                 }
@@ -277,8 +277,6 @@ module.exports = {
                     break;
                 }
                 case "autoplay": {
-                    return interaction.reply({embeds: [new EmbedBuilder().setAuthor({ name: `Functions under maintenance!`, iconURL: client.user.displayAvatarURL() })]})
-                    
                     if (!queue) return sendError(interaction, "No queue found.");
                     const autoplay = queue.toggleAutoplay();
                     await interaction.reply({ content: `🔂 Autoplay is set to ${autoplay ? "On" : "Off"}`, flags: 64 });
@@ -388,7 +386,7 @@ module.exports = {
                         position: 1
                     });
                     if (queue && length >= 1) {
-                        queue.skip();
+                        await queue.skip();
                     }
                     await interaction.deleteReply();
                     break;

@@ -2,7 +2,6 @@ const { DisTube, Playlist, Song } = require('distube')
 const { EmbedBuilder } = require('discord.js')
 const { SpotifyPlugin } = require('@distube/spotify')
 const { SoundCloudPlugin } = require('@distube/soundcloud')
-const { YtDlpPlugin } = require('@distube/yt-dlp')
 const { DeezerPlugin } = require("@distube/deezer");
 const { YouTubePlugin } =  require("@distube/youtube");
 const { spawn } = require("child_process");
@@ -14,6 +13,9 @@ require('dotenv').config();
 
 const YOUTUBE_USER_AGENT =
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36";
+// These clients do not require a browser-based PO-token provider. You can
+// override this only if YouTube changes its client requirements again.
+const YTDLP_PLAYER_CLIENTS = process.env.YTDLP_PLAYER_CLIENTS || "web_embedded,android_vr";
 const ytDlpBinary = path.join(
     __dirname,
     "..",
@@ -142,9 +144,8 @@ function getYtDlpAudioUrl(url) {
                 "--no-playlist",
                 "--no-warnings",
                 "--no-progress",
-                // Use the PO-token provider's supported client instead of android_vr.
                 "--extractor-args",
-                "youtube:player_client=mweb",
+                `youtube:player_client=${YTDLP_PLAYER_CLIENTS}`,
                 "--js-runtimes",
                 "node",
                 "--format",
@@ -161,8 +162,16 @@ function getYtDlpAudioUrl(url) {
                 fs.rmSync(cookie.directory, { recursive: true, force: true });
             };
 
-            response.writeHead(200, { "Content-Type": "audio/webm" });
-            ytDlp.stdout.pipe(response);
+            // Do not send a successful HTTP response until yt-dlp provides
+            // audio bytes. This prevents FFmpeg from treating an empty 403
+            // response as a broken audio stream.
+            let responseStarted = false;
+            ytDlp.stdout.once("data", chunk => {
+                responseStarted = true;
+                response.writeHead(200, { "Content-Type": "audio/webm" });
+                response.write(chunk);
+                ytDlp.stdout.pipe(response);
+            });
             ytDlp.stderr.on("data", chunk => {
                 stderr += chunk;
             });
@@ -174,7 +183,12 @@ function getYtDlpAudioUrl(url) {
             });
             ytDlp.on("close", code => {
                 if (code && stderr) console.error(`[yt-dlp] ${stderr.trim()}`);
-                response.end();
+                if (!responseStarted) {
+                    response.writeHead(502, { "Content-Type": "text/plain" });
+                    response.end("yt-dlp could not retrieve audio from YouTube");
+                } else {
+                    response.end();
+                }
                 close();
                 cleanup();
             });
@@ -199,8 +213,9 @@ function getYtDlpAudioUrl(url) {
     });
 }
 
-// Keep YouTube search handled by @distube/youtube, but fall back to yt-dlp when
-// YouTube changes a player response and ytdl-core cannot find stream formats.
+// Keep search, related-song lookup, and queue metadata in @distube/youtube.
+// yt-dlp is only a fallback audio relay, so no external browser or PO-token
+// provider is part of the bot setup.
 class ResilientYouTubePlugin extends YouTubePlugin {
     async resolve(url, options) {
         try {
@@ -232,6 +247,29 @@ class ResilientYouTubePlugin extends YouTubePlugin {
             return getYtDlpAudioUrl(song.url);
         }
     }
+
+    async getRelatedSongs(song) {
+        try {
+            const related = await super.getRelatedSongs(song);
+            if (related.length) return related;
+        } catch (error) {
+            console.warn(`[YouTube] Related-song lookup failed: ${error.message}`);
+        }
+
+        // Recent YouTube responses can omit related_videos entirely. Autoplay
+        // still needs a next track, so use the current title/uploader as a
+        // lightweight recommendation search instead.
+        const query = [song.uploader?.name, song.name].filter(Boolean).join(" ").trim();
+        if (!query) return [];
+
+        try {
+            const matches = await this.search(query, { type: "video", limit: 5 });
+            return matches.filter(candidate => candidate instanceof Song && candidate.id !== song.id);
+        } catch (error) {
+            console.warn(`[YouTube] Autoplay fallback search failed: ${error.message}`);
+            return [];
+        }
+    }
 }
 
 function loadDistube(client) {
@@ -260,8 +298,6 @@ function loadDistube(client) {
             }),
             new SoundCloudPlugin(),
             new DeezerPlugin(),
-            // Keep the manually installed nightly binary; startup updates only install stable.
-            new YtDlpPlugin({ update: false }),
         ],
         customFilters: {
             "8D": "apulsator=hz=0.08",
@@ -411,7 +447,7 @@ function loadDistube(client) {
         )
 
         .on("initQueue", queue => {
-            queue.autoplay = false;
+            queue.autoplay = true;
             queue.volume = 100;
         })
 };

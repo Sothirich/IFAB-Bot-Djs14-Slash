@@ -16,6 +16,11 @@ const YOUTUBE_USER_AGENT =
 // These clients do not require a browser-based PO-token provider. You can
 // override this only if YouTube changes its client requirements again.
 const YTDLP_PLAYER_CLIENTS = process.env.YTDLP_PLAYER_CLIENTS || "web_embedded,android_vr";
+const LEAVE_ON_EMPTY = process.env.DISTUBE_LEAVE_ON_EMPTY !== "false";
+const configuredEmptyCooldown = Number.parseInt(process.env.DISTUBE_EMPTY_COOLDOWN || "60000", 10);
+const EMPTY_COOLDOWN = Number.isFinite(configuredEmptyCooldown)
+    ? Math.max(0, configuredEmptyCooldown)
+    : 60_000;
 
 function normalizedTrackTitle(value) {
     return String(value ?? "")
@@ -387,6 +392,52 @@ function loadDistube(client) {
         }
     });
 
+    // DisTube v5 no longer implements the legacy leaveOnEmpty/emptyCooldown
+    // options. Recreate that behavior using Discord voice-state updates.
+    const emptyTimers = new Map();
+    const clearEmptyTimer = guildId => {
+        const timer = emptyTimers.get(guildId);
+        if (timer) clearTimeout(timer);
+        emptyTimers.delete(guildId);
+    };
+    const checkEmptyChannel = guild => {
+        const voiceChannel = guild.members.me?.voice?.channel;
+        if (!voiceChannel || !LEAVE_ON_EMPTY) {
+            clearEmptyTimer(guild.id);
+            return;
+        }
+
+        const hasHumanMember = voiceChannel.members.some(member => !member.user.bot);
+        if (hasHumanMember) {
+            clearEmptyTimer(guild.id);
+            return;
+        }
+        if (emptyTimers.has(guild.id)) return;
+
+        const timer = setTimeout(async () => {
+            emptyTimers.delete(guild.id);
+            const currentVoiceChannel = guild.members.me?.voice?.channel;
+            const isStillEmpty = currentVoiceChannel
+                && !currentVoiceChannel.members.some(member => !member.user.bot);
+            if (!isStillEmpty) return;
+
+            const queue = client.distube.getQueue(guild);
+            await queue?.textChannel?.send("Voice channel has been empty. Leaving now.")
+                .catch(error => console.error("Could not send empty-channel message:", error));
+            try {
+                await client.distube.voices.leave(guild);
+            } catch (error) {
+                console.error("Could not leave empty voice channel:", error);
+            }
+        }, EMPTY_COOLDOWN);
+        timer.unref?.();
+        emptyTimers.set(guild.id, timer);
+    };
+
+    client.on("voiceStateUpdate", (oldState, newState) => {
+        checkEmptyChannel(newState.guild || oldState.guild);
+    });
+
     const status = (queue) => `Volume: \`${queue.volume}%\` | Filter: \`${queue.filters.names.join(', ') || "Off"}\` | Loop: \`${queue.repeatMode ? queue.repeatMode == 2 ? "All Queue" : "This Song" : "Off"}\` | Autoplay: \`${queue.autoplay ? "On" : "Off"}\``;
     
     client.distube
@@ -518,10 +569,6 @@ function loadDistube(client) {
             
             client.messageDelete.clear();
         })
-
-        .on('empty', queue => queue.textChannel.send('Voice channel is empty! Leaving the channel...')
-            .then(msg => { setTimeout(() => msg.delete().catch(e => console.log(e)), 5000) })
-        )
 
         .on("initQueue", queue => {
             queue.autoplay = true;

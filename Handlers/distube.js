@@ -19,12 +19,30 @@ const YTDLP_PLAYER_CLIENTS = process.env.YTDLP_PLAYER_CLIENTS || "web_embedded,a
 
 function normalizedTrackTitle(value) {
     return String(value ?? "")
+        .normalize("NFKD")
         .toLowerCase()
         .replace(/\([^)]*\)|\[[^\]]*\]|\{[^}]*\}/g, " ")
         .replace(/\b(official|music video|video|audio|lyrics?|lyric video|visualizer|live|hd|4k|remaster(?:ed)?|sped up|slowed|reverb|nightcore|bass boosted|cover|karaoke|instrumental|clean|explicit|full song)\b/g, " ")
-        .replace(/[^\p{L}\p{N}]+/gu, " ")
+        .replace(/[^\p{L}\p{M}\p{N}]+/gu, " ")
         .replace(/\s+/g, " ")
         .trim();
+}
+
+function trigramSimilarity(first, second) {
+    const toTrigrams = value => {
+        const characters = Array.from(value.replace(/\s/g, ""));
+        const grams = new Set();
+        for (let index = 0; index <= characters.length - 3; index += 1) {
+            grams.add(characters.slice(index, index + 3).join(""));
+        }
+        return grams;
+    };
+
+    const firstTrigrams = toTrigrams(first);
+    const secondTrigrams = toTrigrams(second);
+    if (!firstTrigrams.size || !secondTrigrams.size) return 0;
+    const shared = [...firstTrigrams].filter(trigram => secondTrigrams.has(trigram)).length;
+    return shared / Math.min(firstTrigrams.size, secondTrigrams.size);
 }
 
 function isSameTrack(current, candidate) {
@@ -38,18 +56,18 @@ function isSameTrack(current, candidate) {
     const [shorter, longer] = currentTitle.length <= candidateTitle.length
         ? [currentTitle, candidateTitle]
         : [candidateTitle, currentTitle];
-    return shorter.length >= 5 && ` ${longer} `.includes(` ${shorter} `);
+    return (shorter.length >= 5 && ` ${longer} `.includes(` ${shorter} `))
+        || trigramSimilarity(currentTitle, candidateTitle) >= 0.55;
 }
 
 function uniqueRecommendations(current, candidates) {
-    const seenTitles = new Set();
-    return candidates.filter(candidate => {
-        if (!(candidate instanceof Song) || isSameTrack(current, candidate)) return false;
-        const title = normalizedTrackTitle(candidate.name) || candidate.id;
-        if (seenTitles.has(title)) return false;
-        seenTitles.add(title);
-        return true;
-    });
+    const accepted = [];
+    for (const candidate of candidates) {
+        if (!(candidate instanceof Song) || isSameTrack(current, candidate)) continue;
+        if (accepted.some(existing => isSameTrack(existing, candidate))) continue;
+        accepted.push(candidate);
+    }
+    return accepted;
 }
 const ytDlpBinary = path.join(
     __dirname,
@@ -252,6 +270,25 @@ function getYtDlpAudioUrl(url) {
 // yt-dlp is only a fallback audio relay, so no external browser or PO-token
 // provider is part of the bot setup.
 class ResilientYouTubePlugin extends YouTubePlugin {
+    constructor(options) {
+        super(options);
+        this.relatedSuggestionHistory = new Map();
+    }
+
+    getUnusedRecommendations(song, candidates) {
+        const recommendations = uniqueRecommendations(song, candidates);
+        const key = song.id || normalizedTrackTitle(song.name);
+        if (!key) return recommendations;
+
+        const usedIds = this.relatedSuggestionHistory.get(key) || new Set();
+        const unused = recommendations.filter(candidate => !usedIds.has(candidate.id));
+        if (unused[0]?.id) {
+            usedIds.add(unused[0].id);
+            this.relatedSuggestionHistory.set(key, usedIds);
+        }
+        return unused;
+    }
+
     async resolve(url, options) {
         try {
             return await super.resolve(url, options);
@@ -286,25 +323,29 @@ class ResilientYouTubePlugin extends YouTubePlugin {
     async getRelatedSongs(song) {
         try {
             const related = await super.getRelatedSongs(song);
-            const uniqueRelated = uniqueRecommendations(song, related);
+            const uniqueRelated = this.getUnusedRecommendations(song, related);
             if (uniqueRelated.length) return uniqueRelated;
         } catch (error) {
             console.warn(`[YouTube] Related-song lookup failed: ${error.message}`);
         }
 
-        // Recent YouTube responses can omit related_videos entirely. Autoplay
-        // still needs a next track, so use the current title as a lightweight
-        // recommendation search instead.
-        const query = song.name?.trim();
-        if (!query) return [];
+        // If YouTube has no distinct related videos, prefer another upload
+        // from the current channel/artist before using a wider title search.
+        const queries = [song.uploader?.name, song.name]
+            .map(query => query?.trim())
+            .filter((query, index, all) => query && all.indexOf(query) === index);
 
-        try {
-            const matches = await this.search(query, { type: "video", limit: 20 });
-            return uniqueRecommendations(song, matches);
-        } catch (error) {
-            console.warn(`[YouTube] Autoplay fallback search failed: ${error.message}`);
-            return [];
+        for (const query of queries) {
+            try {
+                const matches = await this.search(query, { type: "video", limit: 20 });
+                const recommendations = this.getUnusedRecommendations(song, matches);
+                if (recommendations.length) return recommendations;
+            } catch (error) {
+                console.warn(`[YouTube] Autoplay fallback search failed: ${error.message}`);
+            }
         }
+
+        return [];
     }
 }
 

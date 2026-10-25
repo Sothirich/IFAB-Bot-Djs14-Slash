@@ -16,9 +16,9 @@
     "@distube/direct-link": "^1.0.1",
     "@distube/soundcloud": "^2.0.4",
     "@distube/spotify": "^2.0.2",
-    "@distube/youtube": "^1.0.4",
+    "@distube/youtube": "^1.1.0",
     "@distube/yt-dlp": "^2.0.1",
-    "@distube/ytdl-core": "https://codeload.github.com/ToddyTheNoobDud/ytdl-core-stuff/tar.gz/refs/heads/master",
+    "@distube/ytdl-core": "^5.0.1",
     "@distube/ytpl": "^1.2.4",
     "@snazzah/davey": "^0.1.12",
     "ascii-table": "^0.0.9",
@@ -28,13 +28,13 @@
     "dotenv": "^17.4.2",
     "glob": "^13.0.6",
     "lyrics-finder": "^21.7.0",
-    "moment": "^2.30.1",
-    "mongoose": "^9.7.4",
+    "moment": "^2.31.0",
+    "mongoose": "^9.11.4",
     "opusscript": "^0.1.1",
-    "sodium-native": "^5.0.10"
+    "sodium-native": "^5.2.0"
   },
   "overrides": {
     "tar": "^7.5.10",
-    "undici": "^7.22.0"
+    "undici": "^7.30.1"
   }
 }

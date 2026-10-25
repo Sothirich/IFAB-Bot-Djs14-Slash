@@ -34,7 +34,11 @@ function logMedia(level, key, message) {
     const now = Date.now();
     if (now - (recentMediaLogs.get(key) || 0) < MEDIA_LOG_COOLDOWN) return;
     recentMediaLogs.set(key, now);
-    const text = String(message).replace(/\s+/g, " ").trim().slice(0, 1_000);
+    const text = String(message)
+        .replace(/https?:\/\/\S+/gi, "<stream-url>")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 1_000);
     console[level](`[Music] ${text}`);
 }
 
@@ -515,7 +519,10 @@ function loadDistube(client) {
     
     client.distube
         .on("ffmpegDebug", message => {
-            if (/error|forbidden|invalid|http|tls/i.test(message)) {
+            // Spawn traces include a full, temporary Googlevideo URL. They are
+            // noisy and can expose signed query parameters without helping to
+            // diagnose playback failures.
+            if (!/\[process\]\s+spawn:/i.test(message) && /error|forbidden|invalid|http|tls/i.test(message)) {
                 logMedia("error", "ffmpeg", `[FFmpeg] ${message}`);
             }
         })

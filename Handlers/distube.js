@@ -21,6 +21,22 @@ const configuredEmptyCooldown = Number.parseInt(process.env.DISTUBE_EMPTY_COOLDO
 const EMPTY_COOLDOWN = Number.isFinite(configuredEmptyCooldown)
     ? Math.max(0, configuredEmptyCooldown)
     : 60_000;
+const MAX_PROCESS_LOG_LENGTH = 4_000;
+const MAX_YTDLP_JSON_LENGTH = 10 * 1024 * 1024;
+const MEDIA_LOG_COOLDOWN = 30_000;
+const recentMediaLogs = new Map();
+
+function appendBoundedLog(current, chunk) {
+    return `${current}${String(chunk)}`.slice(-MAX_PROCESS_LOG_LENGTH);
+}
+
+function logMedia(level, key, message) {
+    const now = Date.now();
+    if (now - (recentMediaLogs.get(key) || 0) < MEDIA_LOG_COOLDOWN) return;
+    recentMediaLogs.set(key, now);
+    const text = String(message).replace(/\s+/g, " ").trim().slice(0, 1_000);
+    console[level](`[Music] ${text}`);
+}
 
 function normalizedTrackTitle(value) {
     return String(value ?? "")
@@ -110,16 +126,23 @@ function runYtDlp(args) {
         const process = spawn(ytDlpBinary, args, { windowsHide: true });
         let stdout = "";
         let stderr = "";
+        let outputTooLarge = false;
 
         process.stdout.on("data", chunk => {
+            if (stdout.length + chunk.length > MAX_YTDLP_JSON_LENGTH) {
+                outputTooLarge = true;
+                process.kill();
+                return;
+            }
             stdout += chunk;
         });
         process.stderr.on("data", chunk => {
-            stderr += chunk;
+            stderr = appendBoundedLog(stderr, chunk);
         });
         process.on("error", reject);
         process.on("close", code => {
-            if (code === 0) resolve(stdout);
+            if (outputTooLarge) reject(new Error("yt-dlp metadata output exceeded the 10 MB safety limit"));
+            else if (code === 0) resolve(stdout);
             else reject(new Error(stderr || `yt-dlp exited with code ${code}`));
         });
     });
@@ -179,6 +202,50 @@ async function resolvePlaylistWithYtDlp(plugin, url, options) {
     }
 }
 
+async function resolveSongWithYtDlp(plugin, url, options) {
+    const cookie = createYtDlpCookieFile();
+    try {
+        const stdout = await runYtDlp([
+            url,
+            "--cookies",
+            cookie.cookieFile,
+            "--no-playlist",
+            "--dump-single-json",
+            "--no-warnings",
+            "--skip-download",
+            "--simulate",
+            "--extractor-args",
+            `youtube:player_client=${YTDLP_PLAYER_CLIENTS}`,
+            "--js-runtimes",
+            "node",
+        ]);
+        const info = JSON.parse(stdout);
+        if (!info?.id || !(info.webpage_url || info.original_url || info.url)) {
+            throw new Error("yt-dlp could not resolve this YouTube video");
+        }
+
+        return new Song({
+            plugin,
+            source: info.extractor || "youtube",
+            playFromSource: true,
+            id: String(info.id),
+            name: info.title || info.fulltitle || "Unknown title",
+            url: info.webpage_url || info.original_url || info.url,
+            isLive: Boolean(info.is_live),
+            duration: info.is_live ? 0 : Number(info.duration) || 0,
+            thumbnail: info.thumbnail || info.thumbnails?.[0]?.url,
+            uploader: {
+                name: info.uploader,
+                url: info.uploader_url,
+            },
+            views: info.view_count,
+            likes: info.like_count,
+        }, options);
+    } finally {
+        fs.rmSync(cookie.directory, { recursive: true, force: true });
+    }
+}
+
 function getYtDlpAudioUrl(url) {
     return new Promise((resolve, reject) => {
         let requested = false;
@@ -194,7 +261,7 @@ function getYtDlpAudioUrl(url) {
             try {
                 cookie = createYtDlpCookieFile();
             } catch (error) {
-                console.error(`[yt-dlp] Could not prepare YouTube cookies: ${error.message}`);
+                logMedia("error", "cookie", `[yt-dlp] Could not prepare YouTube cookies: ${error.message}`);
             }
             const ytDlp = spawn(ytDlpBinary, [
                 url,
@@ -231,16 +298,16 @@ function getYtDlpAudioUrl(url) {
                 ytDlp.stdout.pipe(response);
             });
             ytDlp.stderr.on("data", chunk => {
-                stderr += chunk;
+                stderr = appendBoundedLog(stderr, chunk);
             });
             ytDlp.on("error", error => {
-                console.error(`[yt-dlp] ${error.message}`);
+                logMedia("error", "ytdlp-process", `[yt-dlp] ${error.message}`);
                 response.destroy(error);
                 close();
                 cleanup();
             });
             ytDlp.on("close", code => {
-                if (code && stderr) console.error(`[yt-dlp] ${stderr.trim()}`);
+                if (code && stderr) logMedia("error", `ytdlp-exit-${code}`, `[yt-dlp] ${stderr}`);
                 if (!responseStarted) {
                     response.writeHead(502, { "Content-Type": "text/plain" });
                     response.end("yt-dlp could not retrieve audio from YouTube");
@@ -300,13 +367,19 @@ class ResilientYouTubePlugin extends YouTubePlugin {
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             const stack = error instanceof Error ? error.stack || "" : "";
+            const details = `${message}\n${stack}`;
 
-            if (!/Unsupported YouTube Playlist response|@distube[\\/]ytpl/i.test(`${message}\n${stack}`)) {
-                throw error;
+            if (/Unsupported YouTube Playlist response|@distube[\\/]ytpl/i.test(details)) {
+                logMedia("warn", "playlist-fallback", `[YouTube] ${message}. Retrying playlist resolution with yt-dlp.`);
+                return resolvePlaylistWithYtDlp(this, url, options);
             }
 
-            console.warn(`[YouTube] ${message}. Retrying playlist resolution with yt-dlp.`);
-            return resolvePlaylistWithYtDlp(this, url, options);
+            if (/status code:\s*429|too many requests|rate limit|@distube[\\/]ytdl-core/i.test(details)) {
+                logMedia("warn", "rate-limit-fallback", `[YouTube] ${message}. ytdl-core was rate-limited; retrying resolution with yt-dlp.`);
+                return resolveSongWithYtDlp(this, url, options);
+            }
+
+            throw error;
         }
     }
 
@@ -316,11 +389,11 @@ class ResilientYouTubePlugin extends YouTubePlugin {
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
 
-            if (!/playable formats|UNPLAYABLE_FORMATS/i.test(message)) {
+            if (!/playable formats|UNPLAYABLE_FORMATS|status code:\s*429|too many requests|rate limit/i.test(message)) {
                 throw error;
             }
 
-            console.warn(`[YouTube] ${message}. Retrying with yt-dlp.`);
+            logMedia("warn", "stream-fallback", `[YouTube] ${message}. Retrying with yt-dlp.`);
             return getYtDlpAudioUrl(song.url);
         }
     }
@@ -331,7 +404,7 @@ class ResilientYouTubePlugin extends YouTubePlugin {
             const uniqueRelated = this.getUnusedRecommendations(song, related);
             if (uniqueRelated.length) return uniqueRelated;
         } catch (error) {
-            console.warn(`[YouTube] Related-song lookup failed: ${error.message}`);
+            logMedia("warn", "related-lookup", `[YouTube] Related-song lookup failed: ${error.message}`);
         }
 
         // If YouTube has no distinct related videos, prefer another upload
@@ -346,7 +419,7 @@ class ResilientYouTubePlugin extends YouTubePlugin {
                 const recommendations = this.getUnusedRecommendations(song, matches);
                 if (recommendations.length) return recommendations;
             } catch (error) {
-                console.warn(`[YouTube] Autoplay fallback search failed: ${error.message}`);
+                logMedia("warn", "autoplay-search", `[YouTube] Autoplay fallback search failed: ${error.message}`);
             }
         }
 
@@ -443,7 +516,7 @@ function loadDistube(client) {
     client.distube
         .on("ffmpegDebug", message => {
             if (/error|forbidden|invalid|http|tls/i.test(message)) {
-                console.error(`[FFmpeg] ${message}`);
+                logMedia("error", "ffmpeg", `[FFmpeg] ${message}`);
             }
         })
         .on('playSong', (queue, song) =>queue.textChannel.send({
@@ -474,7 +547,7 @@ function loadDistube(client) {
         )
 
         .on("noRelated", queue => queue.textChannel.send("Cannot find any related songs.")
-            .then(msg => { setTimeout(() => msg.delete().catch(e => console.log(e)), 5000) })
+            .then(msg => { setTimeout(() => msg.delete().catch(() => {}), 5000) })
         )
 
         .on('addSong', (queue, song) =>queue.textChannel.send({
@@ -500,7 +573,7 @@ function loadDistube(client) {
                     }
                 )
             ]
-        }).then(msg => { setTimeout(() => msg.delete().catch(e => console.log(e)), 10000) }))
+        }).then(msg => { setTimeout(() => msg.delete().catch(() => {}), 10000) }))
 
         .on("playList", (queue, playlist, song) => queue.textChannel.send({
             embeds: [new EmbedBuilder()
@@ -524,7 +597,7 @@ function loadDistube(client) {
                 .setThumbnail(playlist.thumbnail.url)
                 .setFooter({ text: `Requested by: ${song.user.tag}`, iconURL: song.user.displayAvatarURL({ dynamic: true }) })
             ]
-        }).then(msg => { setTimeout(() => msg.delete().catch(e => console.log(e)), (song.duration + "000")) }))
+        }).then(msg => { setTimeout(() => msg.delete().catch(() => {}), (song.duration + "000")) }))
         
         .on('addList', (queue, playlist) => queue.textChannel.send({
             embeds: [new EmbedBuilder()
@@ -543,7 +616,7 @@ function loadDistube(client) {
                 )
                 .setThumbnail(playlist.thumbnail.url)
             ]
-        }).then(msg => { setTimeout(() => msg.delete().catch(e => console.log(e)), 20000) })
+        }).then(msg => { setTimeout(() => msg.delete().catch(() => {}), 20000) })
         )
 
         .on('error', (e, queue, song) => {
@@ -555,7 +628,7 @@ function loadDistube(client) {
 
             if (messageDelete) queue.textChannel.messages.fetch(messageDelete.messageId)
             .then(fetchedMsg => {fetchedMsg.delete()})
-            .catch(console.error);
+            .catch(() => {});
 
             client.messageDelete.clear();
         })
@@ -565,7 +638,7 @@ function loadDistube(client) {
 
             if (messageDelete) queue.textChannel.messages.fetch(messageDelete.messageId)
             .then(fetchedMsg => {fetchedMsg.delete()})
-            .catch(console.error);
+            .catch(() => {});
             
             client.messageDelete.clear();
         })
